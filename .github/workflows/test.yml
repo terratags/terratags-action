@@ -31,8 +31,19 @@ jobs:
           EOF
       
       - name: Test action
+        continue-on-error: true
+        id: terratags-test
         uses: ./
         with:
           config: '.terratags.yaml'
           dir: './test'
           verbose: true
+      
+      - name: Verify expected failure
+        run: |
+          if [ "${{ steps.terratags-test.outcome }}" = "failure" ]; then
+            echo "✅ Test passed: Terratags correctly identified missing tags"
+          else
+            echo "❌ Test failed: Expected terratags to fail but it succeeded"
+            exit 1
+          fi
