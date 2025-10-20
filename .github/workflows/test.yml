@@ -1,0 +1,31 @@
+name: Test Action
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Create test Terraform file
+        run: |
+          mkdir -p test
+          cat > test/main.tf << 'EOF'
+          resource "aws_instance" "example" {
+            ami           = "ami-12345678"
+            instance_type = "t2.micro"
+          }
+          EOF
+      
+      - name: Test action
+        uses: ./
+        with:
+          tags: '{"Environment": "test", "ManagedBy": "github-actions"}'
+          directory: './test'
+          dry-run: true
+          verbose: true

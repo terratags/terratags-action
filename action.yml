@@ -1,0 +1,87 @@
+name: 'Terratags'
+description: 'Validate tags on AWS, Azure, and Google Cloud resources in Terraform configurations'
+author: 'Terratags'
+
+inputs:
+  config:
+    description: 'Path or URL to config file (JSON/YAML) containing required tag keys'
+    required: true
+  dir:
+    description: 'Path to Terraform directory to analyze'
+    required: false
+    default: '.'
+  verbose:
+    description: 'Enable verbose output'
+    required: false
+    default: 'false'
+  log-level:
+    description: 'Set logging level (DEBUG, INFO, WARN, ERROR)'
+    required: false
+    default: 'ERROR'
+  plan:
+    description: 'Path to Terraform plan JSON file to analyze'
+    required: false
+  report:
+    description: 'Path to output HTML report file'
+    required: false
+  remediate:
+    description: 'Show auto-remediation suggestions'
+    required: false
+    default: 'false'
+  exemptions:
+    description: 'Path to exemptions file (JSON/YAML)'
+    required: false
+  ignore-case:
+    description: 'Ignore case when comparing required tag keys'
+    required: false
+    default: 'false'
+
+outputs:
+  report-path:
+    description: 'Path to generated HTML report'
+    value: ${{ steps.terratags.outputs.report-path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download Terratags
+      shell: bash
+      run: |
+        VERSION=$(curl -s https://api.github.com/repos/terratags/terratags/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
+        
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        ARCH=$(uname -m)
+        case $ARCH in
+          x86_64) ARCH="amd64" ;;
+          aarch64|arm64) ARCH="arm64" ;;
+        esac
+        
+        URL="https://github.com/terratags/terratags/releases/download/${VERSION}/terratags_${OS}_${ARCH}"
+        curl -L -o terratags "$URL"
+        chmod +x terratags
+        
+    - name: Run Terratags
+      id: terratags
+      shell: bash
+      run: |
+        ARGS=()
+        ARGS+=("-config" "${{ inputs.config }}")
+        ARGS+=("-dir" "${{ inputs.dir }}")
+        
+        [ "${{ inputs.verbose }}" = "true" ] && ARGS+=("-verbose")
+        [ "${{ inputs.log-level }}" != "ERROR" ] && ARGS+=("-log-level" "${{ inputs.log-level }}")
+        [ "${{ inputs.plan }}" != "" ] && ARGS+=("-plan" "${{ inputs.plan }}")
+        [ "${{ inputs.report }}" != "" ] && ARGS+=("-report" "${{ inputs.report }}")
+        [ "${{ inputs.remediate }}" = "true" ] && ARGS+=("-remediate")
+        [ "${{ inputs.exemptions }}" != "" ] && ARGS+=("-exemptions" "${{ inputs.exemptions }}")
+        [ "${{ inputs.ignore-case }}" = "true" ] && ARGS+=("-ignore-case")
+        
+        ./terratags "${ARGS[@]}"
+        
+        if [ "${{ inputs.report }}" != "" ]; then
+          echo "report-path=${{ inputs.report }}" >> $GITHUB_OUTPUT
+        fi
+
+branding:
+  icon: 'check-circle'
+  color: 'green'
