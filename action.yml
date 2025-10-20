@@ -49,15 +49,24 @@ runs:
       run: |
         VERSION=$(curl -s https://api.github.com/repos/terratags/terratags/releases/latest | grep '"tag_name"' | cut -d'"' -f4)
         
-        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        OS=$(uname -s)
         ARCH=$(uname -m)
         case $ARCH in
-          x86_64) ARCH="amd64" ;;
+          x86_64) ARCH="x86_64" ;;
           aarch64|arm64) ARCH="arm64" ;;
         esac
         
-        URL="https://github.com/terratags/terratags/releases/download/${VERSION}/terratags_${OS}_${ARCH}"
-        curl -L -o terratags "$URL"
+        if [[ "$OS" == "Darwin" ]]; then
+          URL="https://github.com/terratags/terratags/releases/download/${VERSION}/terratags_Darwin_${ARCH}.tar.gz"
+        elif [[ "$OS" == "Linux" ]]; then
+          URL="https://github.com/terratags/terratags/releases/download/${VERSION}/terratags_Linux_${ARCH}.tar.gz"
+        else
+          echo "Unsupported OS: $OS"
+          exit 1
+        fi
+        
+        curl -L -o terratags.tar.gz "$URL"
+        tar -xzf terratags.tar.gz
         chmod +x terratags
         
     - name: Run Terratags
