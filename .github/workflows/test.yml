@@ -22,10 +22,17 @@ jobs:
           }
           EOF
       
+      - name: Create test config
+        run: |
+          cat > .terratags.yaml << 'EOF'
+          required_tags:
+            - Environment
+            - ManagedBy
+          EOF
+      
       - name: Test action
         uses: ./
         with:
-          tags: '{"Environment": "test", "ManagedBy": "github-actions"}'
-          directory: './test'
-          dry-run: true
+          config: '.terratags.yaml'
+          dir: './test'
           verbose: true
